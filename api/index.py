@@ -1,16 +1,50 @@
-from http.server import BaseHTTPRequestHandler
-import json
+from fastapi import FastAPI
+import os
+import requests
+
+app = FastAPI()
+
+GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/evaluate"
 
 
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
+@app.get("/api")
+def test_jev():
+    api_key = os.environ.get("AI_GATEWAY_API_KEY")
 
-        self.wfile.write(
-            json.dumps({
-                "status": "ok",
-                "message": "Python function works"
-            }).encode()
-        )
+    if not api_key:
+        return {
+            "status": "error",
+            "message": "AI_GATEWAY_API_KEY ontbreekt"
+        }
+
+    payload = {
+        "model": "typesafe-ai/jev",
+        "state": (
+            "Oracle database alert: ORA-19809. "
+            "Fast Recovery Area is 99 percent full. "
+            "The archiver is stuck."
+        ),
+        "questions": {
+            "storage_problem": {
+                "type": "boolean",
+                "instructions": (
+                    "Is this primarily a storage or capacity related problem?"
+                )
+            }
+        }
+    }
+
+    response = requests.post(
+        GATEWAY_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        },
+        json=payload,
+        timeout=30
+    )
+
+    return {
+        "http_status": response.status_code,
+        "jev_response": response.json()
+    }
